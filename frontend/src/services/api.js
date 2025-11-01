@@ -3,7 +3,7 @@ import axios from 'axios';
 // Create axios instance with base configuration
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
-  timeout: 15000, // Increased timeout
+  timeout: 10000, // Reduced timeout
   headers: {
     'Content-Type': 'application/json',
   },
@@ -17,7 +17,7 @@ api.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log(`Making ${config.method?.toUpperCase()} request to: ${config.url}`);
+    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
     return config;
   },
   (error) => {
@@ -26,20 +26,19 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor - SIMPLIFIED to prevent loops
 api.interceptors.response.use(
   (response) => {
-    console.log(`Response received: ${response.status}`, response.data);
+    console.log(`API Response: ${response.status} for ${response.config.url}`);
     return response;
   },
   (error) => {
-    console.error('Response interceptor error:', error);
-    
-    if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
+    // Simple error logging without redirects
+    console.error('API Error:', {
+      url: error.config?.url,
+      status: error.response?.status,
+      message: error.message
+    });
     
     return Promise.reject(error);
   }

@@ -1,4 +1,5 @@
-import React, { useState, useEffect } from 'react';
+// components/Subscription.jsx - COMPLETE FIXED VERSION
+import React, { useState, useEffect, useRef } from 'react';
 import { subscriptionService, authService, paymentService } from '../services';
 import SubscriptionCard from '../components/SubscriptionCard';
 import { useNavigate } from 'react-router-dom';
@@ -11,96 +12,97 @@ const Subscription = () => {
   const [processing, setProcessing] = useState(false);
   const navigate = useNavigate();
 
-  const user = authService.getCurrentUser();
+  // Use useRef to store user and prevent re-renders
+  const userRef = useRef(authService.getCurrentUser());
 
   useEffect(() => {
+    const user = userRef.current;
+    
     if (!user) {
       navigate('/login');
       return;
     }
+    
+    let isMounted = true;
+    let timeoutId;
+    
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setError('');
+        
+        console.log('Starting API calls for user:', user.user_id);
+        
+        const [subscriptionsData, currentSubscription] = await Promise.all([
+          subscriptionService.getSubscriptions(),
+          subscriptionService.getCurrentSubscription(user.user_id)
+        ]);
+        
+        if (!isMounted) return;
+        
+        console.log('API calls completed successfully');
+        console.log('Subscriptions data:', subscriptionsData);
+        console.log('Current subscription:', currentSubscription);
+        
+        // Ensure subscriptions is always an array
+        const subscriptionsArray = Array.isArray(subscriptionsData) ? subscriptionsData : [];
+        
+        setSubscriptions(subscriptionsArray);
+        setUserSubscription(currentSubscription);
+        
+        if (subscriptionsArray.length === 0) {
+          setError('No subscription plans available');
+        }
+      } catch (err) {
+        if (!isMounted) return;
+        console.error('Fetch data error:', err);
+        setError('Failed to load subscription data');
+        // Use fallback data
+        setSubscriptions(subscriptionService.getDefaultSubscriptions());
+        setUserSubscription(subscriptionService.getFreeSubscription());
+      } finally {
+        if (isMounted) {
+          // Add a small delay to prevent rapid state updates
+          timeoutId = setTimeout(() => {
+            setLoading(false);
+          }, 100);
+        }
+      }
+    };
+    
     fetchData();
-  }, [user, navigate]);
+    
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+      console.log('Component cleanup - stopping API calls');
+    };
+  }, [navigate]); // Removed user from dependencies
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      const [subscriptionsRes, userProfile] = await Promise.all([
-        subscriptionService.getSubscriptions(),
-        subscriptionService.getCurrentSubscription(user.user_id)
-      ]);
-      
-      setSubscriptions(subscriptionsRes.subscriptions || []);
-      setUserSubscription(userProfile);
-    } catch (err) {
-      setError(err.message || 'Failed to load subscription data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
+  // FIXED handleSubscribe function - navigates to payment page
   const handleSubscribe = async (subscription) => {
+    const user = userRef.current;
+    
     if (!user) {
       navigate('/login');
       return;
     }
 
-    setProcessing(true);
-    setError('');
-
-    try {
-      // First process payment
-      const paymentData = {
-        user_id: user.user_id,
-        subscription_id: subscription.subscription_id,
-        payment_method: 'CreditCard',
-        amount: subscription.monthly_fee,
-        currency_code: user.currency_code || 'GBP',
-        card_last4: '4242' // In real app, this would come from payment form
-      };
-
-      const paymentResult = await paymentService.processPayment(paymentData);
-      
-      // Then update subscription
-      const subscriptionData = {
-        subscription_id: subscription.subscription_id,
-        payment_method: 'CreditCard',
-        card_last4: '4242'
-      };
-
-      const subscriptionResult = await subscriptionService.updateSubscription(
-        user.user_id, 
-        subscriptionData
-      );
-
-      // Update local state
-      setUserSubscription({
-        ...userSubscription,
-        current_subscription_id: subscription.subscription_id,
-        level_name: subscription.level_name,
-        can_download: subscription.can_download,
-        max_devices: subscription.max_devices
-      });
-
-      // Update localStorage
-      const updatedUser = {
-        ...user,
-        current_subscription: subscription.level_name,
-        can_download: subscription.can_download,
-        max_devices: subscription.max_devices
-      };
-      localStorage.setItem('user', JSON.stringify(updatedUser));
-
-      alert(`Successfully subscribed to ${subscriptionResult.new_subscription}!`);
-
-    } catch (err) {
-      setError(err.message || 'Subscription failed. Please try again.');
-    } finally {
-      setProcessing(false);
-    }
+    // Navigate to payment page with subscription data
+    navigate('/payment', { 
+      state: { 
+        subscription: subscription,
+        userSubscription: userSubscription, // Pass current subscription for upgrade calculations
+        isUpgrade: !!userSubscription?.current_subscription_id
+      }
+    });
   };
 
+  // Keep handleUpgradeDowngrade for direct upgrades without payment page
   const handleUpgradeDowngrade = async (newSubscription) => {
-    if (!userSubscription) return;
+    const user = userRef.current;
+    
+    if (!user || !userSubscription) return;
 
     const currentSubscription = subscriptions.find(
       sub => sub.subscription_id === userSubscription.current_subscription_id
@@ -109,22 +111,100 @@ const Subscription = () => {
     if (!currentSubscription) return;
 
     const isUpgrade = newSubscription.subscription_id > currentSubscription.subscription_id;
-    const action = isUpgrade ? 'upgrade' : 'downgrade';
-
+    
     if (isUpgrade) {
-      // For upgrades, show confirmation
       const difference = newSubscription.monthly_fee - currentSubscription.monthly_fee;
-      const confirmMessage = `Upgrade to ${newSubscription.level_name} for an additional £${difference} per month?`;
+      const confirmMessage = `Upgrade to ${newSubscription.level_name} for an additional £${difference.toFixed(2)} per month?`;
       
       if (!window.confirm(confirmMessage)) return;
     } else {
-      // For downgrades, show warning about no refunds
       const warningMessage = `Downgrading to ${newSubscription.level_name}. Note: No refunds will be issued for the price difference. Continue?`;
       
       if (!window.confirm(warningMessage)) return;
     }
 
-    await handleSubscribe(newSubscription);
+    // For immediate upgrades/downgrades without payment page
+    await processSubscriptionChange(newSubscription);
+  };
+
+  // Process subscription change directly (without payment page)
+  const processSubscriptionChange = async (subscription) => {
+    const user = userRef.current;
+    
+    if (!user) return;
+
+    setProcessing(true);
+    setError('');
+
+    try {
+      // Calculate amount based on current subscription
+      let amount = subscription.monthly_fee;
+      if (userSubscription?.current_subscription_id) {
+        const currentSub = subscriptions.find(
+          sub => sub.subscription_id === userSubscription.current_subscription_id
+        );
+        if (currentSub && subscription.subscription_id > currentSub.subscription_id) {
+          // Upgrade - charge difference
+          amount = subscription.monthly_fee - currentSub.monthly_fee;
+        } else if (subscription.subscription_id < currentSub.subscription_id) {
+          // Downgrade - no charge (as per your business logic)
+          amount = 0;
+        }
+      }
+
+      // Process payment only if amount > 0
+      if (amount > 0) {
+        const paymentData = {
+          user_id: user.user_id,
+          subscription_id: subscription.subscription_id,
+          payment_method: 'CreditCard',
+          amount: amount,
+          currency_code: user.currency_code || 'GBP',
+          card_last4: '4242' // This would come from saved payment method
+        };
+
+        await paymentService.processPayment(paymentData);
+      }
+
+      // Update subscription
+      const subscriptionData = {
+        subscription_id: subscription.subscription_id,
+        payment_method: 'CreditCard',
+        card_last4: '4242'
+      };
+
+      await subscriptionService.updateSubscription(user.user_id, subscriptionData);
+
+      // Update local state
+      const updatedSubscription = {
+        current_subscription_id: subscription.subscription_id,
+        level_name: subscription.level_name,
+        can_download: subscription.can_download,
+        max_devices: subscription.max_devices
+      };
+      setUserSubscription(updatedSubscription);
+
+      // Update localStorage user data
+      const updatedUser = {
+        ...user,
+        current_subscription_id: subscription.subscription_id,
+        current_subscription: subscription.level_name,
+        can_download: subscription.can_download,
+        max_devices: subscription.max_devices
+      };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
+      // Update the ref as well
+      userRef.current = updatedUser;
+
+      alert(`Successfully subscribed to ${subscription.level_name}!`);
+
+    } catch (err) {
+      console.error('Subscription error:', err);
+      setError(err.message || 'Subscription failed. Please try again.');
+    } finally {
+      setProcessing(false);
+    }
   };
 
   if (loading) {
@@ -149,7 +229,7 @@ const Subscription = () => {
 
         {/* Error Message */}
         {error && (
-          <div className="bg-red-600 text-white p-4 rounded-lg mb-6 max-w-2xl mx-auto">
+          <div className="bg-red-600 text-white p-4 rounded-lg mb-6 max-w-2xl mx-auto text-center">
             {error}
           </div>
         )}
@@ -166,8 +246,8 @@ const Subscription = () => {
 
         {/* Current Subscription Banner */}
         {userSubscription?.current_subscription_id && (
-          <div className="bg-blue-600 text-white p-4 rounded-lg mb-8 max-w-2xl mx-auto">
-            <p className="text-center">
+          <div className="bg-blue-600 text-white p-4 rounded-lg mb-8 max-w-2xl mx-auto text-center">
+            <p className="text-lg">
               Your current plan: <strong>{userSubscription.level_name}</strong>
               {userSubscription.can_download && ' • Download Enabled'}
               {` • ${userSubscription.max_devices} Device${userSubscription.max_devices > 1 ? 's' : ''}`}
@@ -176,98 +256,110 @@ const Subscription = () => {
         )}
 
         {/* Subscription Cards */}
-        <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
-          {subscriptions.map((subscription, index) => {
-            const isCurrent = userSubscription?.current_subscription_id === subscription.subscription_id;
-            const isUpgrade = userSubscription?.current_subscription_id && 
-                             subscription.subscription_id > userSubscription.current_subscription_id;
-            const isDowngrade = userSubscription?.current_subscription_id && 
-                               subscription.subscription_id < userSubscription.current_subscription_id;
+        {subscriptions.length > 0 ? (
+          <div className="grid md:grid-cols-3 gap-8 max-w-6xl mx-auto">
+            {subscriptions.map((subscription, index) => {
+              const isCurrent = userSubscription?.current_subscription_id === subscription.subscription_id;
+              const isUpgrade = userSubscription?.current_subscription_id && 
+                              subscription.subscription_id > userSubscription.current_subscription_id;
+              const isDowngrade = userSubscription?.current_subscription_id && 
+                                subscription.subscription_id < userSubscription.current_subscription_id;
 
-            return (
-              <SubscriptionCard
-                key={subscription.subscription_id}
-                subscription={subscription}
-                isCurrent={isCurrent}
-                onSubscribe={() => {
-                  if (isCurrent) return;
-                  if (userSubscription?.current_subscription_id) {
-                    handleUpgradeDowngrade(subscription);
-                  } else {
-                    handleSubscribe(subscription);
+              return (
+                <SubscriptionCard
+                  key={subscription.subscription_id}
+                  subscription={subscription}
+                  isCurrent={isCurrent}
+                  onSubscribe={() => {
+                    if (isCurrent) return;
+                    
+                    // For new subscriptions, go to payment page
+                    if (!userSubscription?.current_subscription_id) {
+                      handleSubscribe(subscription);
+                    } else {
+                      // For existing subscribers, show upgrade/downgrade confirmation
+                      handleUpgradeDowngrade(subscription);
+                    }
+                  }}
+                  featured={index === 1}
+                  actionText={
+                    isCurrent ? 'Current Plan' :
+                    !userSubscription?.current_subscription_id ? 'Subscribe Now' :
+                    isUpgrade ? 'Upgrade' : 'Downgrade'
                   }
-                }}
-                featured={index === 1}
-                actionText={
-                  isCurrent ? 'Current Plan' :
-                  !userSubscription?.current_subscription_id ? 'Subscribe Now' :
-                  isUpgrade ? 'Upgrade' : 'Downgrade'
-                }
-              />
-            );
-          })}
-        </div>
-
-        {/* Subscription Features Comparison */}
-        <div className="mt-16 max-w-4xl mx-auto">
-          <h2 className="text-2xl font-bold text-white text-center mb-8">Plan Comparison</h2>
-          <div className="bg-gray-800 rounded-lg overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="bg-gray-700">
-                  <th className="p-4 text-left text-white">Feature</th>
-                  {subscriptions.map(sub => (
-                    <th key={sub.subscription_id} className="p-4 text-center text-white">
-                      {sub.level_name}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                <tr className="border-b border-gray-700">
-                  <td className="p-4 text-gray-300">Monthly Price</td>
-                  {subscriptions.map(sub => (
-                    <td key={sub.subscription_id} className="p-4 text-center text-white">
-                      £{sub.monthly_fee}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td className="p-4 text-gray-300">Simultaneous Devices</td>
-                  {subscriptions.map(sub => (
-                    <td key={sub.subscription_id} className="p-4 text-center text-white">
-                      {sub.max_devices}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td className="p-4 text-gray-300">Download Movies</td>
-                  {subscriptions.map(sub => (
-                    <td key={sub.subscription_id} className="p-4 text-center text-white">
-                      {sub.can_download ? '✅' : '❌'}
-                    </td>
-                  ))}
-                </tr>
-                <tr className="border-b border-gray-700">
-                  <td className="p-4 text-gray-300">Video Quality</td>
-                  {subscriptions.map(sub => (
-                    <td key={sub.subscription_id} className="p-4 text-center text-white">
-                      HD
-                    </td>
-                  ))}
-                </tr>
-                <tr>
-                  <td className="p-4 text-gray-300">Device Switch Cooldown</td>
-                  {subscriptions.map(sub => (
-                    <td key={sub.subscription_id} className="p-4 text-center text-white">
-                      {sub.cooldown_days > 0 ? `${sub.cooldown_days} days` : 'None'}
-                    </td>
-                  ))}
-                </tr>
-              </tbody>
-            </table>
+                  disabled={processing}
+                />
+              );
+            })}
           </div>
-        </div>
+        ) : (
+          <div className="text-center text-white text-xl">
+            No subscription plans available at the moment.
+          </div>
+        )}
+
+        {/* Plan Comparison Table */}
+        {subscriptions.length > 0 && (
+          <div className="mt-16 max-w-4xl mx-auto">
+            <h2 className="text-2xl font-bold text-white text-center mb-8">Plan Comparison</h2>
+            <div className="bg-gray-800 rounded-lg overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="bg-gray-700">
+                    <th className="p-4 text-left text-white">Feature</th>
+                    {subscriptions.map(sub => (
+                      <th key={sub.subscription_id} className="p-4 text-center text-white">
+                        {sub.level_name}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-gray-700">
+                    <td className="p-4 text-gray-300">Monthly Price</td>
+                    {subscriptions.map(sub => (
+                      <td key={sub.subscription_id} className="p-4 text-center text-white">
+                        £{sub.monthly_fee}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="p-4 text-gray-300">Simultaneous Devices</td>
+                    {subscriptions.map(sub => (
+                      <td key={sub.subscription_id} className="p-4 text-center text-white">
+                        {sub.max_devices}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="p-4 text-gray-300">Download Movies</td>
+                    {subscriptions.map(sub => (
+                      <td key={sub.subscription_id} className="p-4 text-center text-white">
+                        {sub.can_download ? '✅' : '❌'}
+                      </td>
+                    ))}
+                  </tr>
+                  <tr className="border-b border-gray-700">
+                    <td className="p-4 text-gray-300">Video Quality</td>
+                    {subscriptions.map(sub => (
+                      <td key={sub.subscription_id} className="p-4 text-center text-white">
+                        HD
+                      </td>
+                    ))}
+                  </tr>
+                  <tr>
+                    <td className="p-4 text-gray-300">Device Switch Cooldown</td>
+                    {subscriptions.map(sub => (
+                      <td key={sub.subscription_id} className="p-4 text-center text-white">
+                        {sub.cooldown_days > 0 ? `${sub.cooldown_days} days` : 'None'}
+                      </td>
+                    ))}
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
 
         {/* Important Notes */}
         <div className="mt-8 max-w-4xl mx-auto bg-yellow-900 bg-opacity-20 border border-yellow-600 rounded-lg p-4">

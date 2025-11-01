@@ -3,15 +3,22 @@ const User = require('../models/User');
 const Payment = require('../models/Payment');
 
 const subscriptionController = {
-  async getSubscriptions(req, res) {
-    try {
-      const subscriptions = await Subscription.getAll();
-      res.json({ subscriptions });
-    } catch (error) {
-      console.error('Get subscriptions error:', error);
-      res.status(500).json({ message: 'Error fetching subscriptions' });
-    }
-  },
+// In subscriptionController.js - ensure this format
+async getSubscriptions(req, res) {
+  try {
+    const subscriptions = await Subscription.getAll();
+    res.json({ 
+      success: true,
+      subscriptions // This should be an array
+    });
+  } catch (error) {
+    console.error('Get subscriptions error:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching subscriptions' 
+    });
+  }
+},
 
   async updateSubscription(req, res) {
     try {

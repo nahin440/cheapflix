@@ -15,6 +15,7 @@ import ManageMovies from "./pages/admin/ManageMovies";
 import UserManagement from "./pages/admin/UserManagement";
 import RevenueReports from "./pages/admin/RevenueReports";
 import MoviePlayer from "./pages/MoviePlayer";
+import PaymentPage from "./pages/PaymentPage";
 
 const router = createBrowserRouter([
   {
@@ -48,6 +49,10 @@ const router = createBrowserRouter([
       {
         path: "/subscription",
         element: <Subscription />,
+      },
+      {
+        path: "/payment",
+        element:<PaymentPage></PaymentPage>
       },
       {
         path: "/admin",

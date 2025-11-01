@@ -1,8 +1,9 @@
+// models/Subscription.js - FIXED FOR YOUR DATABASE
 const db = require('../config/database');
 
 class Subscription {
   static async getAll() {
-    const [rows] = await db.execute('SELECT * FROM subscriptions');
+    const [rows] = await db.execute('SELECT * FROM subscriptions ORDER BY subscription_id');
     return rows;
   }
 
