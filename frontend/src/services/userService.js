@@ -1,63 +1,59 @@
 import api from './api';
+import { authService } from './authService';
 
 export const userService = {
-  // Get user profile
-  async getProfile(userId) {
+  // Get user devices from real database
+  async getUserDevices() {
     try {
-      const response = await api.get(`/users/${userId}/profile`);
+      console.log('Fetching user devices from API...');
+      const response = await api.get('/devices');
+      console.log('Devices API response:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to fetch profile' };
-    }
-  },
-
-  // Update user profile
-  async updateProfile(userId, profileData) {
-    try {
-      const response = await api.put(`/users/${userId}/profile`, profileData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to update profile' };
-    }
-  },
-
-  // Get user devices
-  async getUserDevices(userId) {
-    try {
-      const response = await api.get(`/users/${userId}/devices`);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || { message: 'Failed to fetch devices' };
+      console.error('Get user devices error:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch devices' };
     }
   },
 
   // Remove device
-  async removeDevice(userId, deviceId) {
+  async removeDevice(deviceId) {
     try {
-      const response = await api.delete(`/users/${userId}/devices/${deviceId}`);
+      console.log('Removing device:', deviceId);
+      const response = await api.delete(`/devices/${deviceId}`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to remove device' };
+      console.error('Remove device error:', error);
+      throw error.response?.data || { success: false, message: 'Failed to remove device' };
     }
   },
 
-  // Get user downloads
-  async getUserDownloads(userId) {
+  // Get device information and limits
+  async getDeviceInfo() {
     try {
-      const response = await api.get(`/users/${userId}/downloads`);
+      console.log('Fetching device info from API...');
+      const response = await api.get('/devices/info');
+      console.log('Device info API response:', response.data);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to fetch downloads' };
+      console.error('Get device info error:', error);
+      throw error.response?.data || { success: false, message: 'Failed to fetch device info' };
     }
   },
 
-  // Get user payments
-  async getUserPayments(userId) {
+  // Get user profile
+  async getUserProfile() {
     try {
-      const response = await api.get(`/users/${userId}/payments`);
+      const currentUser = authService.getCurrentUser();
+      if (!currentUser) {
+        throw new Error('User not authenticated');
+      }
+
+      const response = await api.get(`/users/${currentUser.user_id}/profile`);
       return response.data;
     } catch (error) {
-      throw error.response?.data || { message: 'Failed to fetch payments' };
+      throw error.response?.data || { success: false, message: 'Failed to fetch user profile' };
     }
   }
 };
+
+export default userService;

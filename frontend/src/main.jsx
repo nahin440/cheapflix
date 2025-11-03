@@ -17,6 +17,8 @@ import RevenueReports from "./pages/admin/RevenueReports";
 import MoviePlayer from "./pages/MoviePlayer";
 import PaymentPage from "./pages/PaymentPage";
 
+
+
 const router = createBrowserRouter([
   {
     path: "/",
@@ -77,6 +79,7 @@ const router = createBrowserRouter([
     ],
   },
 ]);
+
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

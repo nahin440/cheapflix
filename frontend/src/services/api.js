@@ -1,44 +1,47 @@
 import axios from 'axios';
+import { deviceService } from './deviceService';
 
-// Create axios instance with base configuration
 const api = axios.create({
   baseURL: 'http://localhost:5000/api',
-  timeout: 10000, // Reduced timeout
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  timeout: 10000,
 });
 
-// Request interceptor to add auth token
+// Add device token to all requests
 api.interceptors.request.use(
   (config) => {
+    const deviceToken = deviceService.getStoredDeviceToken();
+    if (deviceToken) {
+      config.headers['device-token'] = deviceToken;
+    }
+    
+    // Add auth token if available
     const token = localStorage.getItem('token');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
     
-    console.log(`API Request: ${config.method?.toUpperCase()} ${config.url}`);
+    console.log('API Request:', config.method?.toUpperCase(), config.url);
     return config;
   },
   (error) => {
-    console.error('Request interceptor error:', error);
     return Promise.reject(error);
   }
 );
 
-// Response interceptor - SIMPLIFIED to prevent loops
 api.interceptors.response.use(
   (response) => {
-    console.log(`API Response: ${response.status} for ${response.config.url}`);
+    console.log('API Response:', response.status, 'for', response.config.url);
     return response;
   },
   (error) => {
-    // Simple error logging without redirects
-    console.error('API Error:', {
-      url: error.config?.url,
-      status: error.response?.status,
-      message: error.message
-    });
+    console.error('API Error:', error.response?.status, error.response?.data);
+    
+    if (error.response?.status === 401) {
+      // Unauthorized - redirect to login
+      localStorage.removeItem('user');
+      localStorage.removeItem('isAuthenticated');
+      window.location.href = '/login';
+    }
     
     return Promise.reject(error);
   }

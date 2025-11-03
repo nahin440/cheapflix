@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { authService } from '../services';
 
 const Login = () => {
@@ -9,7 +9,6 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
@@ -25,12 +24,11 @@ const Login = () => {
     setError('');
 
     try {
-      const result = await authService.login(formData);
-      console.log('Login successful:', result);
-      navigate('/movies'); // Redirect to movies page after login
+      await authService.login(formData);
+      // Navigation happens in authService after successful login
     } catch (err) {
+      console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
-    } finally {
       setLoading(false);
     }
   };

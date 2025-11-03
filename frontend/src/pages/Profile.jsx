@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { authService, userService } from '../services';
+import DeviceManagement from '../components/DeviceManagement';
 
 const Profile = () => {
   const [user, setUser] = useState(null);
@@ -9,6 +10,7 @@ const Profile = () => {
   const [payments, setPayments] = useState([]);
   const [activeTab, setActiveTab] = useState('profile');
   const [loading, setLoading] = useState(true);
+  const [deviceLimitWarning, setDeviceLimitWarning] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -19,6 +21,14 @@ const Profile = () => {
     }
     setUser(currentUser);
     fetchUserData(currentUser.user_id);
+    
+    // Check for device limit warnings in URL parameters
+    const urlParams = new URLSearchParams(window.location.search);
+    const deviceError = urlParams.get('device_error');
+    if (deviceError === 'limit_exceeded') {
+      setDeviceLimitWarning('You have reached your device limit. Please manage your devices below.');
+      setActiveTab('devices');
+    }
   }, [navigate]);
 
   const fetchUserData = async (userId) => {
@@ -26,9 +36,9 @@ const Profile = () => {
       setLoading(true);
       // Fetch devices, downloads, payments in parallel
       const [devicesRes, downloadsRes, paymentsRes] = await Promise.all([
-        userService.getUserDevices(userId),
-        userService.getUserDownloads(userId),
-        userService.getUserPayments(userId)
+        userService.getUserDevices(userId).catch(err => ({ devices: [] })),
+        userService.getUserDownloads(userId).catch(err => ({ downloads: [] })),
+        userService.getUserPayments(userId).catch(err => ({ payments: [] }))
       ]);
 
       setDevices(devicesRes.devices || []);
@@ -58,17 +68,43 @@ const Profile = () => {
       <div className="container mx-auto px-4 max-w-4xl">
         {/* Header */}
         <div className="bg-gray-800 rounded-lg p-6 mb-6">
-          <h1 className="text-3xl font-bold text-white mb-2">My Profile</h1>
-          <p className="text-gray-400">Manage your account and preferences</p>
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-white mb-2">My Profile</h1>
+              <p className="text-gray-400">Manage your account and preferences</p>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors whitespace-nowrap"
+            >
+              Logout
+            </button>
+          </div>
         </div>
 
+        {/* Device Limit Warning */}
+        {deviceLimitWarning && (
+          <div className="bg-yellow-600 border border-yellow-500 rounded-lg p-4 mb-6">
+            <div className="flex items-center">
+              <span className="text-yellow-200 mr-2">⚠️</span>
+              <p className="text-yellow-200">{deviceLimitWarning}</p>
+              <button 
+                onClick={() => setDeviceLimitWarning('')}
+                className="ml-auto text-yellow-200 hover:text-white"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tabs */}
-        <div className="flex border-b border-gray-700 mb-6">
+        <div className="flex border-b border-gray-700 mb-6 overflow-x-auto">
           {['profile', 'devices', 'downloads', 'payments'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 font-medium capitalize ${
+              className={`px-4 py-2 font-medium capitalize whitespace-nowrap ${
                 activeTab === tab
                   ? 'text-red-500 border-b-2 border-red-500'
                   : 'text-gray-400 hover:text-white'
@@ -101,37 +137,12 @@ const Profile = () => {
                 <p className="text-white text-lg">{user.can_download ? 'Yes' : 'No'}</p>
               </div>
             </div>
-            <button
-              onClick={handleLogout}
-              className="mt-6 bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors"
-            >
-              Logout
-            </button>
           </div>
         )}
 
         {/* Devices Tab */}
         {activeTab === 'devices' && (
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-2xl font-bold text-white mb-4">Registered Devices</h2>
-            {devices.length === 0 ? (
-              <p className="text-gray-400">No devices registered</p>
-            ) : (
-              <div className="space-y-4">
-                {devices.map(device => (
-                  <div key={device.device_id} className="flex justify-between items-center p-4 bg-gray-700 rounded-lg">
-                    <div>
-                      <p className="text-white font-medium">{device.device_name}</p>
-                      <p className="text-gray-400 text-sm">Last login: {new Date(device.last_login).toLocaleDateString()}</p>
-                    </div>
-                    <button className="text-red-500 hover:text-red-400">
-                      Remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
+          <DeviceManagement />
         )}
 
         {/* Downloads Tab */}
