@@ -1,17 +1,19 @@
 const Movie = require('../models/Movie');
 const multer = require('multer');
 const path = require('path');
-const fs = require('fs-extra');
+const fs = require('fs');
 
-// Define upload directories - CORRECT PATHS for your structure
-const videosDir = path.join(__dirname, '../../uploads/videos');
-const thumbnailsDir = path.join(__dirname, '../../uploads/thumbnails');
+// Upload directories - outside src but inside project
+const uploadsDir = path.join(__dirname, '../../uploads');
+const videosDir = path.join(uploadsDir, 'videos');
+const thumbnailsDir = path.join(uploadsDir, 'thumbnails');
 
-// Ensure directories exist
-fs.ensureDirSync(videosDir);
-fs.ensureDirSync(thumbnailsDir);
+// Create directories if they don't exist
+if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir);
+if (!fs.existsSync(videosDir)) fs.mkdirSync(videosDir);
+if (!fs.existsSync(thumbnailsDir)) fs.mkdirSync(thumbnailsDir);
 
-// Simple storage
+// Simple storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     if (file.fieldname === 'video') {
@@ -21,16 +23,20 @@ const storage = multer.diskStorage({
     }
   },
   filename: (req, file, cb) => {
-    const name = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, file.fieldname + '-' + name + path.extname(file.originalname));
+    // Rename files with timestamp and original extension
+    const timestamp = Date.now();
+    const ext = path.extname(file.originalname);
+    const filename = `${file.fieldname}-${timestamp}${ext}`;
+    cb(null, filename);
   }
 });
 
-// Accept all files
+// Accept all file types
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 3 * 1024 * 1024 * 1024 },
-  fileFilter: (req, file, cb) => cb(null, true)
+  fileFilter: (req, file, cb) => {
+    cb(null, true); // Accept all files
+  }
 }).fields([
   { name: 'video', maxCount: 1 },
   { name: 'thumbnail', maxCount: 1 }
@@ -40,7 +46,7 @@ const movieController = {
   // Upload movie
   async uploadMovie(req, res) {
     try {
-      console.log('Upload request received');
+      console.log('Uploading movie...');
 
       if (!req.files?.video) {
         return res.status(400).json({ 
@@ -54,23 +60,23 @@ const movieController = {
 
       const { title, genre, release_year, duration, description } = req.body;
       
-      if (!title?.trim() || !genre?.trim()) {
+      // Basic validation
+      if (!title || !genre) {
         return res.status(400).json({
           success: false,
           message: 'Title and genre are required'
         });
       }
 
-      // Simple movie data
+      // Create movie data
       const movieData = {
         title: title.trim(),
         genre: genre.trim(),
         release_year: parseInt(release_year) || new Date().getFullYear(),
         duration: parseInt(duration) || 0,
         description: description?.trim() || '',
-        file_url: videoFile.filename,
-        thumbnail_url: thumbnailFile ? thumbnailFile.filename : null,
-        added_by_admin: null
+        file_url: videoFile.filename, // Store renamed filename
+        thumbnail_url: thumbnailFile ? thumbnailFile.filename : null
       };
 
       // Save to database
@@ -106,7 +112,9 @@ const movieController = {
   async getMovie(req, res) {
     try {
       const movie = await Movie.findById(req.params.movieId);
-      if (!movie) return res.status(404).json({ success: false, message: 'Movie not found' });
+      if (!movie) {
+        return res.status(404).json({ success: false, message: 'Movie not found' });
+      }
       res.json({ success: true, movie });
     } catch (error) {
       console.error('Get movie error:', error);
@@ -117,9 +125,34 @@ const movieController = {
   // Delete movie
   async deleteMovie(req, res) {
     try {
-      const deleted = await Movie.delete(req.params.movieId);
-      if (!deleted) return res.status(404).json({ success: false, message: 'Movie not found' });
-      res.json({ success: true, message: 'Movie deleted' });
+      const movieId = req.params.movieId;
+      
+      // Get movie details first
+      const movie = await Movie.findById(movieId);
+      if (!movie) {
+        return res.status(404).json({ success: false, message: 'Movie not found' });
+      }
+
+      // Delete files from storage
+      if (movie.file_url) {
+        const videoPath = path.join(videosDir, movie.file_url);
+        if (fs.existsSync(videoPath)) {
+          fs.unlinkSync(videoPath);
+        }
+      }
+
+      if (movie.thumbnail_url) {
+        const thumbPath = path.join(thumbnailsDir, movie.thumbnail_url);
+        if (fs.existsSync(thumbPath)) {
+          fs.unlinkSync(thumbPath);
+        }
+      }
+
+      // Delete from database
+      const deleted = await Movie.delete(movieId);
+      
+      res.json({ success: true, message: 'Movie deleted successfully' });
+
     } catch (error) {
       console.error('Delete movie error:', error);
       res.status(500).json({ success: false, message: 'Error deleting movie' });
@@ -129,62 +162,22 @@ const movieController = {
   // Stream movie
   async streamMovie(req, res) {
     try {
-      console.log('Stream request for movie ID:', req.params.movieId);
+      const movieId = req.params.movieId;
+      const movie = await Movie.findById(movieId);
       
-      const movie = await Movie.findById(req.params.movieId);
-      if (!movie) {
-        console.log('Movie not found in database');
+      if (!movie || !movie.file_url) {
         return res.status(404).json({ success: false, message: 'Movie not found' });
       }
 
-      if (!movie.file_url) {
-        console.log('Movie has no file URL');
+      const videoPath = path.join(videosDir, movie.file_url);
+      
+      if (!fs.existsSync(videoPath)) {
         return res.status(404).json({ success: false, message: 'Video file not found' });
       }
 
-      const videoPath = path.join(videosDir, movie.file_url);
-      console.log('Looking for video at:', videoPath);
+      // Simple file streaming
+      res.sendFile(videoPath);
       
-      // Check if file exists
-      if (!fs.existsSync(videoPath)) {
-        console.log('Video file does not exist at path');
-        return res.status(404).json({ success: false, message: 'Video file not found on server' });
-      }
-
-      const stat = fs.statSync(videoPath);
-      const fileSize = stat.size;
-      const range = req.headers.range;
-
-      console.log('File found, size:', fileSize, 'Range header:', range);
-
-      if (range) {
-        // Handle range requests for seeking
-        const parts = range.replace(/bytes=/, "").split("-");
-        const start = parseInt(parts[0], 10);
-        const end = parts[1] ? parseInt(parts[1], 10) : fileSize - 1;
-        const chunksize = (end - start) + 1;
-        
-        console.log(`Streaming bytes ${start}-${end}/${fileSize}`);
-        
-        const file = fs.createReadStream(videoPath, { start, end });
-        const head = {
-          'Content-Range': `bytes ${start}-${end}/${fileSize}`,
-          'Accept-Ranges': 'bytes',
-          'Content-Length': chunksize,
-          'Content-Type': 'video/mp4',
-        };
-        res.writeHead(206, head);
-        file.pipe(res);
-      } else {
-        // Send entire file
-        console.log('Streaming entire file');
-        const head = {
-          'Content-Length': fileSize,
-          'Content-Type': 'video/mp4',
-        };
-        res.writeHead(200, head);
-        fs.createReadStream(videoPath).pipe(res);
-      }
     } catch (error) {
       console.error('Stream error:', error);
       res.status(500).json({ success: false, message: 'Error streaming video' });
@@ -194,17 +187,15 @@ const movieController = {
   // Get thumbnail
   async getThumbnail(req, res) {
     try {
-      console.log('Thumbnail request for movie ID:', req.params.movieId);
+      const movieId = req.params.movieId;
+      const movie = await Movie.findById(movieId);
       
-      const movie = await Movie.findById(req.params.movieId);
       if (!movie) {
         return res.status(404).json({ success: false, message: 'Movie not found' });
       }
 
-      // If no thumbnail, return default image
+      // If no thumbnail, return default
       if (!movie.thumbnail_url) {
-        console.log('No thumbnail, returning default');
-        // Create a simple SVG as default thumbnail
         const svg = `
           <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="300" height="450" fill="#1F2937"/>
@@ -216,12 +207,8 @@ const movieController = {
       }
 
       const thumbnailPath = path.join(thumbnailsDir, movie.thumbnail_url);
-      console.log('Looking for thumbnail at:', thumbnailPath);
       
-      // Check if file exists
       if (!fs.existsSync(thumbnailPath)) {
-        console.log('Thumbnail file does not exist, returning default');
-        // Return default image if thumbnail doesn't exist
         const svg = `
           <svg width="300" height="450" viewBox="0 0 300 450" fill="none" xmlns="http://www.w3.org/2000/svg">
             <rect width="300" height="450" fill="#1F2937"/>
@@ -232,20 +219,8 @@ const movieController = {
         return res.send(svg);
       }
 
-      // Determine content type based on file extension
-      const ext = path.extname(movie.thumbnail_url).toLowerCase();
-      const contentTypes = {
-        '.jpg': 'image/jpeg',
-        '.jpeg': 'image/jpeg',
-        '.png': 'image/png',
-        '.gif': 'image/gif',
-        '.webp': 'image/webp',
-        '.svg': 'image/svg+xml'
-      };
-
-      console.log('Serving thumbnail with content type:', contentTypes[ext] || 'image/jpeg');
-      res.set('Content-Type', contentTypes[ext] || 'image/jpeg');
-      fs.createReadStream(thumbnailPath).pipe(res);
+      // Send thumbnail file
+      res.sendFile(thumbnailPath);
 
     } catch (error) {
       console.error('Thumbnail error:', error);

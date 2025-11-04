@@ -3,8 +3,8 @@ const db = require('../config/database');
 const Movie = {
   async create(movieData) {
     const sql = `INSERT INTO movies 
-      (title, genre, release_year, duration, description, file_url, thumbnail_url, added_by_admin) 
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)`;
+      (title, genre, release_year, duration, description, file_url, thumbnail_url) 
+      VALUES (?, ?, ?, ?, ?, ?, ?)`;
     
     const [result] = await db.execute(sql, [
       movieData.title,
@@ -13,8 +13,7 @@ const Movie = {
       movieData.duration,
       movieData.description,
       movieData.file_url,
-      movieData.thumbnail_url,
-      movieData.added_by_admin
+      movieData.thumbnail_url
     ]);
     
     return result.insertId;
