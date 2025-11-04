@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { movieService, authService } from '../../services';
+import { movieService } from '../../services';
 
 const AddMovie = () => {
   const navigate = useNavigate();
@@ -15,9 +15,6 @@ const AddMovie = () => {
   const [thumbnailFile, setThumbnailFile] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-
-  const user = authService.getCurrentUser();
-  const isAdmin = user && user.user_id;
 
   const genres = ['Action', 'Adventure', 'Comedy', 'Drama', 'Horror', 'Romance', 'Sci-Fi'];
 
@@ -43,11 +40,6 @@ const AddMovie = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    if (!isAdmin) {
-      setError('Admin access required');
-      return;
-    }
-
     if (!formData.title.trim() || !formData.genre || !formData.duration || !videoFile) {
       setError('Please fill all required fields');
       return;
@@ -69,8 +61,8 @@ const AddMovie = () => {
 
       await movieService.uploadMovie(submitData);
       
-      // Success - redirect
-      setTimeout(() => navigate('/admin/manage-movies'), 1000);
+      // Success - redirect to movies page
+      setTimeout(() => navigate('/movies'), 1000);
 
     } catch (err) {
       setError(err.message || 'Upload failed');
@@ -79,28 +71,12 @@ const AddMovie = () => {
     }
   };
 
-  if (!isAdmin) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <div className="text-red-500 text-xl mb-4">Access Denied</div>
-          <button 
-            onClick={() => navigate('/movies')}
-            className="bg-red-600 hover:bg-red-700 text-white px-6 py-3 rounded-lg"
-          >
-            Back to Movies
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-gray-900 py-8">
       <div className="container mx-auto px-4 max-w-2xl">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-white mb-2">Add New Movie</h1>
-          <p className="text-gray-400">Upload a new movie</p>
+          <p className="text-gray-400">Upload a new movie to your library</p>
         </div>
 
         {error && (
@@ -120,7 +96,7 @@ const AddMovie = () => {
                 onChange={handleInputChange}
                 required
                 className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded text-white"
-                placeholder="Enter title"
+                placeholder="Enter movie title"
                 disabled={loading}
               />
             </div>
@@ -221,7 +197,7 @@ const AddMovie = () => {
             
             <button
               type="button"
-              onClick={() => navigate('/admin/manage-movies')}
+              onClick={() => navigate('/movies')}
               className="bg-gray-600 hover:bg-gray-700 text-white px-6 py-2 rounded transition-colors"
             >
               Cancel

@@ -175,7 +175,7 @@ const MoviePlayer = () => {
           crossOrigin="anonymous"
           controls={false} // Use custom controls
         >
-          Your browser does not support the video tag!
+          Your browser does not support the video tag.
         </video>
 
         {/* Custom Controls */}

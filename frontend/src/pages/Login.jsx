@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { authService } from '../services';
 
 const Login = () => {
@@ -9,6 +9,7 @@ const Login = () => {
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const navigate = useNavigate();
 
   const handleChange = (e) => {
     setFormData({
@@ -18,17 +19,30 @@ const Login = () => {
     setError('');
   };
 
+  // Generate simple device token
+  const generateDeviceToken = () => {
+    return `device_${Math.random().toString(36).substring(2)}_${Date.now()}`;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
 
     try {
-      await authService.login(formData);
-      // Navigation happens in authService after successful login
+      // Add device info to login data
+      const loginData = {
+        ...formData,
+        device_name: 'Web Browser',
+        device_token: generateDeviceToken()
+      };
+
+      const result = await authService.login(loginData);
+      console.log('Login successful:', result);
+      navigate('/movies'); // Redirect to movies page after login
     } catch (err) {
-      console.error('Login error:', err);
       setError(err.message || 'Login failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };

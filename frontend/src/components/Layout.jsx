@@ -1,20 +1,14 @@
-import React, { useEffect } from 'react'; // Make sure to import useEffect
+import React from 'react';
+import { Outlet } from 'react-router-dom';
 import Header from './Header';
 import Footer from './Footer';
-import { Outlet } from 'react-router-dom';
 
-const Layout = ({ children }) => {
-  useEffect(() => {
-    console.log('App mounted - Checking localStorage:');
-    console.log('user:', localStorage.getItem('user'));
-    console.log('isAuthenticated:', localStorage.getItem('isAuthenticated'));
-  }, []);
-
+const Layout = () => {
   return (
-    <div className="min-h-screen bg-gray-900 flex flex-col">
+    <div className="min-h-screen bg-gray-900 text-white flex flex-col">
       <Header />
-      <main className="flex-grow">
-       <Outlet></Outlet>
+      <main className="flex-1">
+        <Outlet />
       </main>
       <Footer />
     </div>
