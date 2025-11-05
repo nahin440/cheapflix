@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Nov 01, 2025 at 08:34 PM
+-- Generation Time: Nov 05, 2025 at 03:02 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -100,6 +100,16 @@ CREATE TABLE `devices` (
   `last_login` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `devices`
+--
+
+INSERT INTO `devices` (`device_id`, `user_id`, `device_name`, `device_token`, `registered_at`, `last_login`) VALUES
+(19, 5, 'Web Browser', 'device_wdikft1cfdp_1762276732254', '2025-11-04 23:18:52', '2025-11-04 23:18:52'),
+(20, 6, 'Web Browser', 'device_dtksx729pak_1762300483990', '2025-11-05 05:54:44', '2025-11-05 05:54:44'),
+(22, 7, 'Web Browser', 'device_2kkhja837w_1762302317968', '2025-11-05 06:25:18', '2025-11-05 06:25:18'),
+(23, 4, 'Web Browser', 'device_38qieeukga_1762302736800', '2025-11-05 06:32:16', '2025-11-05 06:32:16');
+
 -- --------------------------------------------------------
 
 --
@@ -137,7 +147,10 @@ CREATE TABLE `movies` (
 --
 
 INSERT INTO `movies` (`movie_id`, `title`, `genre`, `release_year`, `duration`, `description`, `file_url`, `thumbnail_url`, `added_by_admin`, `added_at`) VALUES
-(1, 'song', 'Drama', '2025', 4, 'ffgfgfddfdfd', 'video-1762022642758-344901975.mp4', 'thumbnail-1762022642868-506790930.png', NULL, '2025-11-02 00:44:02');
+(2, 'aaaaac', 'Adventure', '2025', 4, 'anananan', 'video-1762268068613.mp4', 'thumbnail-1762268068950.png', NULL, '2025-11-04 20:54:29'),
+(3, 'anuv', 'Adventure', '2025', 4, 'song', 'video-1762268576535.mp4', 'thumbnail-1762268577357.png', NULL, '2025-11-04 21:02:57'),
+(4, 'ishq', 'Romance', '2025', 4, 'nffffff', 'video-1762268640786.mp4', 'thumbnail-1762268641388.png', NULL, '2025-11-04 21:04:01'),
+(6, 'Nunu', 'Horror', '2025', 2, 'Nunu nai nuigga', 'video-1762270948421.mp4', 'thumbnail-1762270948579.png', NULL, '2025-11-04 21:42:28');
 
 -- --------------------------------------------------------
 
@@ -172,6 +185,50 @@ CREATE TABLE `payments` (
   `card_last4` char(4) DEFAULT NULL,
   `non_refundable` tinyint(1) DEFAULT 1
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `payments`
+--
+
+INSERT INTO `payments` (`payment_id`, `user_id`, `subscription_id`, `payment_method`, `amount`, `currency_code`, `exchange_rate`, `transaction_date`, `card_last4`, `non_refundable`) VALUES
+(1, 1, 1, 'CreditCard', 4.99, 'GBP', 1.000000, '2025-11-02 20:59:20', '3212', 1),
+(3, 1, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-02 20:59:38', '4242', 1),
+(5, 1, 1, 'CreditCard', 4.99, 'GBP', 1.000000, '2025-11-02 21:00:01', '4242', 1),
+(6, 2, 2, 'CreditCard', 7.99, 'GBP', 1.000000, '2025-11-02 23:01:45', '2345', 1),
+(8, 1, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-04 19:58:54', '4242', 1),
+(10, 1, 3, 'CreditCard', 2.00, 'GBP', 1.000000, '2025-11-04 19:59:00', '4242', 1),
+(12, 1, 2, 'CreditCard', 7.99, 'GBP', 1.000000, '2025-11-04 20:09:17', '4242', 1),
+(13, 1, 1, 'CreditCard', 4.99, 'GBP', 1.000000, '2025-11-04 20:09:24', '4242', 1),
+(14, 2, 3, 'CreditCard', 2.00, 'GBP', 1.000000, '2025-11-04 20:13:07', '4242', 1),
+(16, 2, 2, 'CreditCard', 7.99, 'BDT', 1.000000, '2025-11-04 20:25:20', '4242', 1),
+(17, 2, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-04 20:28:52', '4242', 1),
+(18, 2, 3, 'CreditCard', 5.00, 'GBP', 1.000000, '2025-11-04 20:29:20', '4242', 1),
+(20, 3, 1, 'CreditCard', 4.99, 'GBP', 1.000000, '2025-11-04 20:30:42', '6711', 1),
+(22, 2, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-04 21:32:10', '4242', 1),
+(23, 4, 2, 'CreditCard', 7.99, 'GBP', 1.000000, '2025-11-04 23:07:55', '4567', 1),
+(25, 5, 1, 'CreditCard', 4.99, 'GBP', 1.000000, '2025-11-05 04:32:03', '3556', 1),
+(27, 6, 3, 'CreditCard', 0.07, 'BDT', 0.007200, '2025-11-05 05:56:34', '3234', 1),
+(29, 7, 3, 'CreditCard', 9.99, 'GBP', 1.000000, '2025-11-05 06:27:11', '5432', 1),
+(31, 4, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-05 06:48:43', '4242', 1),
+(32, 4, 3, 'CreditCard', 5.00, 'GBP', 1.000000, '2025-11-05 06:49:04', '4242', 1),
+(34, 4, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-05 07:06:34', '4242', 1),
+(35, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:06:43', '4242', 1),
+(37, 4, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-05 07:12:41', '4242', 1),
+(38, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:12:46', '4242', 1),
+(40, 4, 3, 'CreditCard', 2.00, 'GBP', 1.000000, '2025-11-05 07:12:52', '4242', 1),
+(42, 4, 1, 'CreditCard', 4.99, 'BDT', 1.000000, '2025-11-05 07:29:39', '4242', 1),
+(43, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:29:48', '4242', 1),
+(45, 4, 3, 'CreditCard', 5.00, 'GBP', 1.000000, '2025-11-05 07:29:52', '4242', 1),
+(47, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:30:03', '4242', 1),
+(49, 4, 3, 'CreditCard', 5.00, 'GBP', 1.000000, '2025-11-05 07:30:30', '4242', 1),
+(51, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:35:31', '4242', 1),
+(52, 4, 2, 'CreditCard', 3.00, 'GBP', 1.000000, '2025-11-05 07:38:43', '4242', 1),
+(53, 4, 2, 'CreditCard', 3.00, 'BDT', 1.000000, '2025-11-05 07:38:43', '4242', 1),
+(54, 4, 3, 'CreditCard', 2.00, 'GBP', 1.000000, '2025-11-05 07:46:42', '4242', 1),
+(55, 4, 3, 'CreditCard', 2.00, 'BDT', 1.000000, '2025-11-05 07:46:42', '4242', 1),
+(56, 4, 2, 'CreditCard', 7.99, 'BDT', 1.000000, '2025-11-05 07:47:15', '4242', 1),
+(57, 4, 3, 'CreditCard', 2.00, 'GBP', 1.000000, '2025-11-05 07:47:20', '4242', 1),
+(58, 4, 3, 'CreditCard', 2.00, 'BDT', 1.000000, '2025-11-05 07:47:20', '4242', 1);
 
 -- --------------------------------------------------------
 
@@ -223,7 +280,13 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`user_id`, `full_name`, `email`, `password_hash`, `phone`, `address`, `country`, `currency_code`, `current_subscription_id`, `created_at`, `updated_at`) VALUES
-(1, 'Nahin Zubayer', 'rafironin@gmail.com', '$2b$10$/3vLmlldkRiOysdfae8MaOpbn7ofWnUZmxli4yp1G.yiHh5iqF18u', '01754654695', '310/1 golgonda', 'Bangladesh', 'GBP', NULL, '2025-11-01 23:58:43', '2025-11-01 23:58:43');
+(1, 'Nahin Zubayer', 'rafironin@gmail.com', '$2b$10$/3vLmlldkRiOysdfae8MaOpbn7ofWnUZmxli4yp1G.yiHh5iqF18u', '01754654695', '310/1 golgonda', 'Bangladesh', 'GBP', 1, '2025-11-01 23:58:43', '2025-11-04 20:09:24'),
+(2, 'Nahin Zubayer', 'rafi@gmail.com', '$2b$10$mDYhF625rc9V58LEy3q6yuVIFJH33CJ4Lj0KP85KbqUFf2DqtpHaW', '01754654695', '310/1 golgonda', 'Bangladesh', 'BDT', 1, '2025-11-02 21:51:32', '2025-11-04 21:32:10'),
+(3, 'nnnnn', 'nn@gmail.com', '$2b$10$ytvkgAqt7TY4ce0FxW2rS.bijeICB7XTzG/.YmI0iCMZSH9Z9Aj/q', '01754654695', '310/1 golgonda', 'Bangladesh', 'GBP', 1, '2025-11-04 20:30:06', '2025-11-04 20:30:42'),
+(4, 'Mahin Jawad', 'mahin1575@gmail.com', '$2b$10$M0L2kEKSWGEb64upZSgi9eAiaij8TsIco1KzQhoUIKWry5j/Sl.Ya', '01744842814', 'Depz, Ashulia,Savar, Dhaka', 'Bangladesh', 'BDT', 3, '2025-11-04 21:48:39', '2025-11-05 07:47:20'),
+(5, 'Mahin Tanzim', 'mahin@gmail.com', '$2b$10$c2Sg9br.hAx100Q/r1zP0OcrcwExBhy6tFHQmTLIXr.AdR2Vx0vbm', '01744842814', 'Depz, Ashulia,Savar, Dhaka', 'Bangladesh', 'BDT', 1, '2025-11-04 23:09:13', '2025-11-05 04:36:10'),
+(6, 'Mahin Jawad', 'mahin@email.com', '$2b$10$1czs/WNmOmy2UqS4C/boceIdE2WKLdMVb7AnkE6aZGBKoS97apva.', '01744842814', 'Depz, Ashulia,Savar, Dhaka', 'Bangladesh', 'BDT', 3, '2025-11-05 05:54:26', '2025-11-05 05:56:34'),
+(7, 'Admin', 'admin@cheapflix.com', '$2b$10$9E3toCILwohzjmqzEzH86.L6cZ1KMSWsX8U13THON5d9D7U5CZc5K', '01234567891', 'Borderland, Chernobil, India', 'India', 'BDT', 3, '2025-11-05 06:25:02', '2025-11-05 06:27:11');
 
 --
 -- Indexes for dumped tables
@@ -335,7 +398,7 @@ ALTER TABLE `cancellation_requests`
 -- AUTO_INCREMENT for table `devices`
 --
 ALTER TABLE `devices`
-  MODIFY `device_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `device_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
 
 --
 -- AUTO_INCREMENT for table `downloads`
@@ -347,7 +410,7 @@ ALTER TABLE `downloads`
 -- AUTO_INCREMENT for table `movies`
 --
 ALTER TABLE `movies`
-  MODIFY `movie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `movie_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
 
 --
 -- AUTO_INCREMENT for table `notifications`
@@ -359,7 +422,7 @@ ALTER TABLE `notifications`
 -- AUTO_INCREMENT for table `payments`
 --
 ALTER TABLE `payments`
-  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `payment_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=59;
 
 --
 -- AUTO_INCREMENT for table `subscriptions`
@@ -371,7 +434,7 @@ ALTER TABLE `subscriptions`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `user_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- Constraints for dumped tables
