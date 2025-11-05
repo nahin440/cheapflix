@@ -16,11 +16,13 @@ import UserManagement from "./pages/admin/UserManagement";
 import RevenueReports from "./pages/admin/RevenueReports";
 import MoviePlayer from "./pages/MoviePlayer";
 import PaymentPage from "./pages/PaymentPage";
+import ErrorPage from "./pages/ErrorPage";
 
 const router = createBrowserRouter([
   {
     path: "/",
     element: <Layout />,
+    errorElement: <ErrorPage></ErrorPage>,
     children: [
       {
         path: "/",
